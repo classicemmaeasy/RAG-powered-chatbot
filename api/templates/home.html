@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fielding's Chatbot</title>
+    <style>
+        /* General Styling */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            position: relative;
+            height: 100vh;
+        }
+
+        /* Chat Icon */
+        .chat-icon {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background-color: #5e35b1;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            box-shadow: none;
+        }
+
+        .chat-icon:hover {
+            transform: scale(1.1);
+        }
+
+        /* Chatbot Container */
+        .chatbot-container {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 350px;
+            max-height: 450px;
+            background-color: #ffffff;
+            border-radius: 15px;
+            overflow: hidden;
+            display: none;
+            flex-direction: column;
+            animation: slide-up 0.3s ease-in-out;
+        }
+
+        /* Chat Header */
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: linear-gradient(to right, #5e35b1, #7e57c2);
+            color: white;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+        }
+
+        .chat-header h2 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .close-btn {
+            cursor: pointer;
+            font-size: 18px;
+            color: white;
+        }
+
+        /* Chat Messages */
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            line-height: 1.4;
+            display: inline-block;
+            max-width: 90%;
+            word-break: break-word;
+        }
+
+        .user-message {
+            background-color: #5e35b1;
+            color: white;
+            float: right;
+            clear: both;
+        }
+
+        .assistant-message {
+            background-color: #e0e0e0;
+            color: #333;
+            float: left;
+            clear: both;
+        }
+
+        /* Chat Input */
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            padding: 10px 15px;
+            background-color: #ffffff;
+            border-top: 1px solid #eeeeee;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #cccccc;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-field:focus {
+            border-color: #5e35b1;
+        }
+
+        .send-btn {
+            background-color: #5e35b1;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+
+        .send-btn:hover {
+            background-color: #4a2390;
+        }
+
+        /* Animation */
+        @keyframes slide-up {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .chatbot-container {
+                width: 100%;
+                bottom: 0;
+                right: 0;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Chat Icon -->
+    <div class="chat-icon">&#x1F4AC;</div>
+
+    <!-- Chatbot Interface -->
+    <div class="chatbot-container" id="chatbot-container">
+        <div class="chat-header">
+            <h2>Feildings Bot</h2>
+            <span class="close-btn">&times;</span>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- Initial assistant message -->
+            <div class="message assistant-message">
+            </div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="user-input" class="input-field" placeholder="Type a message..." />
+            <button id="send-message" class="send-btn">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSessionId = null;
+
+        // Initialize variables
+        const chatIcon = document.querySelector('.chat-icon');
+        const chatbotContainer = document.getElementById('chatbot-container');
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendMessageBtn = document.getElementById('send-message');
+
+        // Toggle chat visibility
+        chatIcon.addEventListener('click', () => {
+            chatbotContainer.style.display = chatbotContainer.style.display === 'none' ? 'flex' : 'none';
+        });
+
+        // Close chat
+        document.querySelector('.close-btn').addEventListener('click', () => {
+            chatbotContainer.style.display = 'none';
+        });
+
+        // Function to add messages
+        function addMessage(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            messageDiv.textContent = content;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Handle sending messages
+        async function sendMessage(content) {
+            addMessage('user', content);
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: content,
+                        session_id: currentSessionId
+                    })
+                });
+
+                const data = await response.json();
+                addMessage('assistant', data.answer || 'No response available.');
+
+                // Update session ID
+                currentSessionId = data.session_id;
+
+            } catch (error) {
+                console.error(error);
+                addMessage('assistant', 'Error: Unable to connect to server.');
+            }
+        }
+
+        // Send message on button click
+        sendMessageBtn.addEventListener('click', () => {
+            const message = userInput.value.trim();
+            if (message) {
+                sendMessage(message);
+                userInput.value = '';
+            }
+        });
+
+        // Send message on Enter key
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessageBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>

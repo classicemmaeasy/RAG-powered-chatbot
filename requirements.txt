@@ -1,0 +1,15 @@
+langchain
+langchain-groq
+langchain-core
+langchain_community
+docx2txt
+pypdf
+langchain_chroma
+langchain-huggingface
+python-multipart
+fastapi
+flask
+flask-cors
+flask_restx
+uvicorn
+sentence-transformers
